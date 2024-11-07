@@ -4,3 +4,4 @@ runs/
 logs/
 plots/
 results/
+__pycache__/
