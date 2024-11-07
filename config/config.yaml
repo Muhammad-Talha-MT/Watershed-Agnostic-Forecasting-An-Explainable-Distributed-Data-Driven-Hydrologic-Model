@@ -1,0 +1,23 @@
+h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
+labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/spatial_interpolation.csv"
+gpu: 1
+batch_size: 32
+lr: 0.0001
+epochs: 10000
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_64_20y"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_20y"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_20y"
+resume: false
+mode: "train"  # "train" or "infer"
+
+
+# h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
+# labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/spatial_interpolation"
+# gpu: 2
+# batch_size: 32
+# lr: 0.0001
+# epochs: 10000
+# tensorboard_logdir: "runs/cnn_lstm_global_spatial_learning"
+# checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64"
+# resume: false
+# mode: "infer"  # "train" or "infer"

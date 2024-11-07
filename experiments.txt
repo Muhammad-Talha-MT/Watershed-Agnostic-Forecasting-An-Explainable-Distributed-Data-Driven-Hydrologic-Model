@@ -1,0 +1,9 @@
+1. Min/Max Normalized input features
+2. Min/Max Normalized output labels
+3. Changing model complexity
+4. Changing batch size 8, 16, 32
+5. Gradient Clipping
+6. Learning Rate Scheduling
+7. Let's change the loss function 
+8. Instead of using CNN-LSTM use ResNet (pretrained)
+9. Log Normalization 

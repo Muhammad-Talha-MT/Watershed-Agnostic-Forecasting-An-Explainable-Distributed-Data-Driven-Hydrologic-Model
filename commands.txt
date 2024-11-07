@@ -1,0 +1,10 @@
+python /home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/eval.py --h5_file /data/PRISM/Michigan_250m_1990_2022.h5 --checkpoint_path /home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/checkpoint_resnet_lstm_adam_1_label.pth.tar --labels_path /home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/combined_streamflow_all_vpuids.csv --save_dir /home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/plots/min-max --plot_only
+
+
+python main.py \
+    --h5_file /data/PRISM/Michigan_250m_1990_2022.h5 \
+    --labels_path /home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/combined_streamflow_all_vpuids.csv \
+    --batch_size 16 \
+    --lr 1e-4 \
+    --epochs 200 \
+    --tensorboard_logdir runs/experiment_1
