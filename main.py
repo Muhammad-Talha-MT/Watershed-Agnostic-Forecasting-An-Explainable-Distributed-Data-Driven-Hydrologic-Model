@@ -237,18 +237,18 @@ def main():
     config = load_yaml_config('config/config.yaml')
     
     # Set primary device for DataParallel
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") 
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
 
     # Load data
-    # ppt = read_hdf5_data_parallel(config['h5_file'], 'ppt', 2003, 2022)
-    # tmin = read_hdf5_data_parallel(config['h5_file'], 'tmin', 2003, 2022)
-    # tmax = read_hdf5_data_parallel(config['h5_file'], 'tmax', 2003, 2022)
+    ppt = read_hdf5_data_parallel(config['h5_file'], 'ppt', 2002, 2006)
+    tmin = read_hdf5_data_parallel(config['h5_file'], 'tmin', 2002, 2006)
+    tmax = read_hdf5_data_parallel(config['h5_file'], 'tmax', 2002, 2006)
 
     labels = pd.read_csv(config['labels_path'])
-    labels = labels.iloc[:7300]
+    labels = labels.iloc[:1825]
     min_length = min(len(ppt), len(tmin), len(tmax), len(labels))
     
     # labels_train = pd.read_csv(config['labels_path']+'_train_54.csv')
@@ -258,7 +258,7 @@ def main():
 
     # Ensure consistency between input data and labels
     # min_length = min(len(ppt), len(tmin), len(tmax), len(labels_train))
-    min_length = 7300
+    min_length = 1825
     ppt = ppt[:min_length]
     tmin = tmin[:min_length]
     tmax = tmax[:min_length]
@@ -273,7 +273,7 @@ def main():
     val_labels = labels.iloc[:, 45:55]   # Last 19 labels for valing
     test_labels = labels.iloc[:, 55:]   # Last 19 labels for valing
     print(train_labels.shape, val_labels.shape, test_labels.shape)
-    exit()
+    # exit()
     # Create separate datasets for training and valing
     train_dataset = ClimateDataset(ppt, tmin, tmax, train_labels)
     val_dataset = ClimateDataset(ppt, tmin, tmax, val_labels)
@@ -311,7 +311,7 @@ def main():
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[0, 1])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[1])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     # model.freeze_backbone()
 
