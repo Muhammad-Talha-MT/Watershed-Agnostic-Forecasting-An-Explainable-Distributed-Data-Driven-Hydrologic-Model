@@ -1,6 +1,6 @@
 import os
 import yaml
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 import torch
 from torch.utils.data import DataLoader, random_split, Dataset, Subset
 import torch.nn as nn
@@ -38,9 +38,10 @@ def save_checkpoint(state, filename):
     
 #     return model, optimizer, scheduler, start_epoch
 
-def load_checkpoint(checkpoint_path, model, optimizer):
-    checkpoint = torch.load(checkpoint_path)
-    
+def load_checkpoint(checkpoint_path, model, optimizer, device):
+    # checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+
     # Retrieve the state_dict from the checkpoint
     state_dict = checkpoint['state_dict']
     
@@ -53,6 +54,8 @@ def load_checkpoint(checkpoint_path, model, optimizer):
         state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
     
     model.load_state_dict(state_dict)
+    
+    model.to(device)
     optimizer.load_state_dict(checkpoint['optimizer'])
     
     start_epoch = checkpoint['epoch'] + 1
@@ -237,7 +240,7 @@ def main():
     config = load_yaml_config('config/config.yaml')
     
     # Set primary device for DataParallel
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu") 
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
@@ -311,7 +314,7 @@ def main():
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[1])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[2])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     # model.freeze_backbone()
 
@@ -325,11 +328,20 @@ def main():
     criterion = nn.MSELoss()
 
     if config['resume']:
-        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer)
+        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
 
     if config['mode'] == 'infer':
-        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer)
-        inference_loader = DataLoader(train_dataset, batch_size=config['batch_size'])
+        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
+        # Define batch size and input dimensions
+        # batch_size = 1  # Adjust as needed
+        # height, width = 1849, 1458  # Replace with your actual spatial dimensions
+
+        # Create dummy inputs for ppt, tmin, tmax
+        # ppt_dummy = torch.randn(batch_size, height, width)
+        # tmin_dummy = torch.randn(batch_size, height, width)
+        # tmax_dummy = torch.randn(batch_size, height, width)
+        # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
+        inference_loader = DataLoader(test_dataset, batch_size=config['batch_size'])
         inference(model, inference_loader, device, 'results/')
     elif config['mode'] == 'train':
         for epoch in range(start_epoch, config['epochs']):
