@@ -8,7 +8,10 @@ def unnormalize(tensor):
     # Assume that data was normalized between [0, 1]. Adjust as per your normalization.
     return tensor * 255.0
 
-def visualize_top_examples(dataloader, save_dir, examples_per_batch=5):
+import os
+import matplotlib.pyplot as plt
+
+def visualize_all_examples(dataloader, save_dir):
     os.makedirs(save_dir, exist_ok=True)
     
     for i, data in enumerate(dataloader):
@@ -16,32 +19,56 @@ def visualize_top_examples(dataloader, save_dir, examples_per_batch=5):
         tmin = data['tmin'].cpu().numpy()
         tmax = data['tmax'].cpu().numpy()
         
-        # Plot and save the first 5 examples from the batch
-        num_samples_in_batch = min(examples_per_batch, ppt.shape[0])  # Plot up to 5 examples per batch
+        # Plot and save all examples from the batch
+        num_samples_in_batch = ppt.shape[0]  # Set to the total number of samples in the batch
         
         for j in range(num_samples_in_batch):
             fig, axs = plt.subplots(1, 3, figsize=(15, 5))
             
             # PPT plot with color bar
             im0 = axs[0].imshow(ppt[j], cmap='Blues', aspect='auto')
-            axs[0].set_title(f'PPT Example {i}')
+            axs[0].set_title(f'PPT Example {j} Batch {i}')
             fig.colorbar(im0, ax=axs[0], orientation='vertical')
             
             # TMIN plot with color bar
             im1 = axs[1].imshow(tmin[j], cmap='Reds', aspect='auto')
-            axs[1].set_title(f'TMIN Example {i}')
+            axs[1].set_title(f'TMIN Example {j} Batch {i}')
             fig.colorbar(im1, ax=axs[1], orientation='vertical')
             
             # TMAX plot with color bar
             im2 = axs[2].imshow(tmax[j], cmap='Reds', aspect='auto')
-            axs[2].set_title(f'TMAX Example {i}')
+            axs[2].set_title(f'TMAX Example {j} Batch {i}')
             fig.colorbar(im2, ax=axs[2], orientation='vertical')
             
             # Save the figure
-            plt.savefig(os.path.join(save_dir, f'sample_{i}.png'))
+            plt.savefig(os.path.join(save_dir, f'batch_{i}_sample_{j}.png'))
             plt.close(fig)
+        
+        if i == 100:
+            return
 
 
+def visualize_label_distributions(dataloader, num_labels, save_dir):
+    os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
+    label_data = {f'Label {i}': [] for i in range(num_labels)}  # Dictionary to store label data by index
+
+    # Collect data
+    for data in dataloader:
+        labels = data['label'].cpu().numpy()  # Convert labels to numpy array
+        for i in range(num_labels):
+            label_data[f'Label {i}'].extend(labels[:, i])  # Append label data by index
+
+    # Plot distributions
+    for i in range(num_labels):
+        plt.figure(figsize=(10, 6))
+        # sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=np.ptp(label_data[f'Label {i}']) / 30)  # Adjust binwidth as necessary
+        sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=0.01)
+        plt.title(f'Distribution of Label {i}')
+        plt.xlabel(f'Label {i}')
+        plt.ylabel('Frequency')
+        plt.grid(True)
+        plt.savefig(os.path.join(save_dir, f'Label_{i}_distribution.png'))
+        plt.close()  # Close the figure to free memory
 
 
 def visualize_box_plot(dataloader, save_dir, num_days=15):

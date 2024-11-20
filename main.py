@@ -8,12 +8,12 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_squared_error
 from torch.utils.tensorboard import SummaryWriter
-from data_loader import read_hdf5_data_parallel
+from data_loader import HDF5Dataset
 from dataset import ClimateDataset
 from model import ResNet_LSTM, CNN_LSTM
 import pandas as pd
 import argparse
-from visualize import visualize_top_examples
+from visualize import visualize_all_examples, visualize_label_distributions
 
 def save_checkpoint(state, filename):
     torch.save(state, filename)
@@ -90,7 +90,7 @@ def train_model(model, train_loader, optimizer, criterion, device, writer, epoch
         labels = data['label'].to(device)
         optimizer.zero_grad()
         outputs = model(ppt, tmin, tmax)
-        outputs = outputs[:, :44]
+        outputs = outputs[:, :54]
         # print(outputs[:, :44])
         # print(outputs[:, 44:54])
         # print(outputs[:, 54:64])
@@ -148,7 +148,7 @@ def val_model(model, val_loader, criterion, device, writer, epoch):
             labels = data['label'].to(device)
             
             outputs = model(ppt, tmin, tmax)
-            outputs = outputs[:, 44:54]
+            outputs = outputs[:, 54:64]
             # print("val output:", outputs.shape)
             # print("val labels:", labels.shape)
             loss = criterion(outputs, labels)
@@ -240,19 +240,43 @@ def main():
     config = load_yaml_config('config/config.yaml')
     
     # Set primary device for DataParallel
-    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") 
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
 
     # Load data
-    ppt = read_hdf5_data_parallel(config['h5_file'], 'ppt', 2002, 2006)
-    tmin = read_hdf5_data_parallel(config['h5_file'], 'tmin', 2002, 2006)
-    tmax = read_hdf5_data_parallel(config['h5_file'], 'tmax', 2002, 2006)
+    variables_to_load = ['ppt', 'tmin', 'tmax']
+    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2019, mode='train')
+    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2019, mode='test')
+    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    val_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    # for idx, batch in enumerate(train_dataloader):
+    #     # Each 'batch' is a dictionary with keys corresponding to your variables and 'label'
+    #     ppt = batch['ppt'].shape  # Precipitation data tensor for the batch
+    #     tmax = batch['tmax'].shape  # Maximum temperature data tensor for the batch
+    #     tmin = batch['tmin'].shape  # Minimum temperature data tensor for the batch
+    #     labels = batch['label'].shape  # Labels tensor for the batch
+    #     print(idx, ppt, tmax, tmin, labels)
+        
+    # for idx, batch in enumerate(test_dataloader):
+    #     # Each 'batch' is a dictionary with keys corresponding to your variables and 'label'
+    #     ppt = batch['ppt'].shape  # Precipitation data tensor for the batch
+    #     tmax = batch['tmax'].shape  # Maximum temperature data tensor for the batch
+    #     tmin = batch['tmin'].shape  # Minimum temperature data tensor for the batch
+    #     labels = batch['label'].shape  # Labels tensor for the batch
+    #     print(idx, ppt, tmax, tmin, labels)
+    # visualize_all_examples(train_dataloader, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/optimized_dataloader')
+    # visualize_label_distributions(train_dataloader, 54, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-optimized-dataloader')
+    # exit()
+    # Access individual variables
+    # ppt = data['ppt']
+    # tmin = data['tmin']
+    # tmax = data['tmax']
 
-    labels = pd.read_csv(config['labels_path'])
-    labels = labels.iloc[:1825]
-    min_length = min(len(ppt), len(tmin), len(tmax), len(labels))
+    # labels = pd.read_csv(config['labels_path'])
+    # labels = labels.iloc[:1825]
+    # min_length = min(len(ppt), len(tmin), len(tmax), len(labels))
     
     # labels_train = pd.read_csv(config['labels_path']+'_train_54.csv')
     # labels_val = pd.read_csv(config['labels_path']+'_val_10.csv')
@@ -261,42 +285,42 @@ def main():
 
     # Ensure consistency between input data and labels
     # min_length = min(len(ppt), len(tmin), len(tmax), len(labels_train))
-    min_length = 1825
-    ppt = ppt[:min_length]
-    tmin = tmin[:min_length]
-    tmax = tmax[:min_length]
-    labels = labels[:min_length]
+    # min_length = 1825
+    # ppt = ppt[:min_length]
+    # tmin = tmin[:min_length]
+    # tmax = tmax[:min_length]
+    # labels = labels[:min_length]
     # train_labels = labels_train[:min_length]
     # val_labels = labels_val[:min_length]
     
     
     # Prepare datasets
     # Split the labels into training and valing
-    train_labels = labels.iloc[:, 1:45]  # First 45 labels for training
-    val_labels = labels.iloc[:, 45:55]   # Last 19 labels for valing
-    test_labels = labels.iloc[:, 55:]   # Last 19 labels for valing
-    print(train_labels.shape, val_labels.shape, test_labels.shape)
-    # exit()
-    # Create separate datasets for training and valing
-    train_dataset = ClimateDataset(ppt, tmin, tmax, train_labels)
-    val_dataset = ClimateDataset(ppt, tmin, tmax, val_labels)
-    test_dataset = ClimateDataset(ppt, tmin, tmax, test_labels)
-    # Now split the dataset
-    print(train_dataset.labels)
-    print("Train PPT:", train_dataset.ppt.shape)
-    print("Train TMIN:",train_dataset.tmin.shape)
-    print("Train TMAX:",train_dataset.tmax.shape)
-    print("Train labels:",train_dataset.labels.shape)
-    print(val_dataset.labels)
-    print("val PPT:", val_dataset.ppt.shape)
-    print("val TMIN:",val_dataset.tmin.shape)
-    print("val TMAX:",val_dataset.tmax.shape)
-    print("val labels:",val_dataset.labels.shape)
-    print(test_dataset.labels)
-    print("val PPT:", test_dataset.ppt.shape)
-    print("val TMIN:",test_dataset.tmin.shape)
-    print("val TMAX:",test_dataset.tmax.shape)
-    print("val labels:",test_dataset.labels.shape)
+    # train_labels = labels.iloc[:, 1:45]  # First 45 labels for training
+    # val_labels = labels.iloc[:, 45:55]   # Last 19 labels for valing
+    # test_labels = labels.iloc[:, 55:]   # Last 19 labels for valing
+    # print(train_labels.shape, val_labels.shape, test_labels.shape)
+    # # exit()
+    # # Create separate datasets for training and valing
+    # train_dataset = ClimateDataset(ppt, tmin, tmax, train_labels)
+    # val_dataset = ClimateDataset(ppt, tmin, tmax, val_labels)
+    # test_dataset = ClimateDataset(ppt, tmin, tmax, test_labels)
+    # # Now split the dataset
+    # print(train_dataset.labels)
+    # print("Train PPT:", train_dataset.ppt.shape)
+    # print("Train TMIN:",train_dataset.tmin.shape)
+    # print("Train TMAX:",train_dataset.tmax.shape)
+    # print("Train labels:",train_dataset.labels.shape)
+    # print(val_dataset.labels)
+    # print("val PPT:", val_dataset.ppt.shape)
+    # print("val TMIN:",val_dataset.tmin.shape)
+    # print("val TMAX:",val_dataset.tmax.shape)
+    # print("val labels:",val_dataset.labels.shape)
+    # print(test_dataset.labels)
+    # print("val PPT:", test_dataset.ppt.shape)
+    # print("val TMIN:",test_dataset.tmin.shape)
+    # print("val TMAX:",test_dataset.tmax.shape)
+    # print("val labels:",test_dataset.labels.shape)
     # exit()
     # Split based on predefined indices
     # train_indices = list(range(0, int(len(dataset) * 0.8)))  # First 80% for training
@@ -306,15 +330,15 @@ def main():
     # val_dataset = torch.utils.data.Subset(dataset, val_indices)
 
     # # Prepare data loaders
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
-    val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
+    # train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
+    # val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     # train_loader = DataLoader(dataset, batch_size=config['batch_size'])
     # visualize_top_examples(train_loader, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_pixel_norm', 365)
     # exit()
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[2])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[1, 2])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     # model.freeze_backbone()
 
@@ -330,19 +354,19 @@ def main():
     if config['resume']:
         model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
 
-    if config['mode'] == 'infer':
-        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
-        # Define batch size and input dimensions
-        # batch_size = 1  # Adjust as needed
-        # height, width = 1849, 1458  # Replace with your actual spatial dimensions
+    # if config['mode'] == 'infer':
+    #     model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
+    #     # Define batch size and input dimensions
+    #     # batch_size = 1  # Adjust as needed
+    #     # height, width = 1849, 1458  # Replace with your actual spatial dimensions
 
-        # Create dummy inputs for ppt, tmin, tmax
-        # ppt_dummy = torch.randn(batch_size, height, width)
-        # tmin_dummy = torch.randn(batch_size, height, width)
-        # tmax_dummy = torch.randn(batch_size, height, width)
-        # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
-        inference_loader = DataLoader(test_dataset, batch_size=config['batch_size'])
-        inference(model, inference_loader, device, 'results/')
+    #     # Create dummy inputs for ppt, tmin, tmax
+    #     # ppt_dummy = torch.randn(batch_size, height, width)
+    #     # tmin_dummy = torch.randn(batch_size, height, width)
+    #     # tmax_dummy = torch.randn(batch_size, height, width)
+    #     # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
+    #     inference_loader = DataLoader(test_dataset, batch_size=config['batch_size'])
+    #     inference(model, inference_loader, device, 'results/')
     elif config['mode'] == 'train':
         for epoch in range(start_epoch, config['epochs']):
             train_loss, train_nse, train_mse = train_model(model, train_loader, optimizer, criterion, device, writer, epoch)

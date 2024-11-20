@@ -1,14 +1,15 @@
 h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
 labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/spatial_interpolation.csv"
+# labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/combined_streamflow_all_vpuids.csv"
 gpu: 1
 batch_size: 32
 lr: 0.0001
 epochs: 10000
-tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_64_4y"
-checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_4y"
-save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_4y"
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_54_20y"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"
 resume: false
-mode: "infer"  # "train" or "infer"
+mode: "train"  # "train" or "infer"
 
 
 # h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
