@@ -1,0 +1,27 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  detailed:
+    format: '%(asctime)s - %(name)s - [%(levelname)s] %(module)s %(lineno)d: %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+  file_handler:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/training-1.log
+    encoding: utf-8
+loggers:
+  my_application:
+    level: DEBUG
+    handlers: [console, file_handler]
+    propagate: no
+root:
+  level: WARNING
+  handlers: [console]

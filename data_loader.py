@@ -46,14 +46,6 @@ class HDF5Dataset(Dataset):
                         self.global_min[var] = min(self.global_min[var], np.nanmin(valid_data))
                         self.global_max[var] = max(self.global_max[var], np.nanmax(valid_data))
                         
-    # def normalize_labels(self, labels_df):
-    #     # Calculate min/max for each column
-    #     label_min = labels_df.min()
-    #     label_max = labels_df.max()
-    #     # Avoid division by zero in normalization
-    #     label_range = np.where((label_max - label_min) == 0, 1, (label_max - label_min))
-    #     # Normalize and convert to numpy array for faster access
-    #     return ((labels_df - label_min) / label_range).values.astype(np.float32)
     
     def normalize_labels(self, labels_df):
         # Ensure all values are positive by shifting the dataset
