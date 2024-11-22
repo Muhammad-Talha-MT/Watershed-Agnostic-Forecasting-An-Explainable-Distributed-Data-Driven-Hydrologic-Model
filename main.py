@@ -235,12 +235,10 @@ def main():
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
     criterion = nn.MSELoss()
-
-    if config['resume']:
-        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
-
     
-    elif config['mode'] == 'train':
+    if config['mode'] == 'train' :
+        if config['resume']:
+            model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
         for epoch in range(start_epoch, config['epochs']):
             train_loss, train_nse, train_mse = train_model(model, train_loader, optimizer, criterion, device, writer, epoch, logger)
             writer.add_scalar('Loss/Train', train_loss, epoch)
