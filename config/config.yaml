@@ -4,7 +4,7 @@ labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_d
 gpu: 1
 batch_size: 64
 lr: 0.0001
-epochs: 1000
+epochs: 10000
 tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_54_20y"
 checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"
 save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"

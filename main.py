@@ -159,7 +159,8 @@ def inference(model, dataloader, device, save_dir):
             tmax = data['tmax'].to(device)
             labels = data['label'].to(device)
             outputs = model(ppt, tmin, tmax)
-            outputs = outputs[:, 54:64]  # Adjust index if needed
+            # outputs = outputs[:, 54:64]  # Adjust index if needed
+            outputs = outputs[:, :54]
             all_outputs.append(outputs)
             all_labels.append(labels)
 
@@ -176,10 +177,14 @@ def inference(model, dataloader, device, save_dir):
     for i in range(all_outputs.shape[1]):
         output = all_outputs[:, i]
         label = all_labels[:, i]
+
+        # Convert tensors to CPU for matplotlib compatibility
+        output_cpu = output.cpu().numpy()
+        label_cpu = label.cpu().numpy()
         
         mse = torch.mean((output - label) ** 2).item()
         nse = calculate_nse(label, output).item()
-        r2 = r2_score(label.cpu().numpy(), output.cpu().numpy())  # r2_score requires numpy arrays
+        r2 = r2_score(label_cpu, output_cpu)
 
         mse_values.append(mse)
         nse_values.append(nse)
@@ -188,18 +193,19 @@ def inference(model, dataloader, device, save_dir):
         print(f'Label {i+1} - R²: {r2:.2f}, NSE: {nse:.2f}, MSE: {mse:.2f}')
         
         plt.figure(figsize=(10, 6))
-        plt.scatter(label.cpu().numpy(), output.cpu().numpy(), alpha=0.6, color='blue')
+        plt.scatter(label_cpu, output_cpu, alpha=0.6, color='blue')
         plt.xlabel('Actual Values')
         plt.ylabel('Predicted Values')
         plt.title(f'Actual vs. Predicted - Label {i+1}')
-        plt.plot([label.min(), label.max()], [label.min(), label.max()], 'k--', lw=2)
+        plt.plot([label_cpu.min(), label_cpu.max()], [label_cpu.min(), label_cpu.max()], 'k--', lw=2)
         plt.grid(True)
         plt.legend()
         plt.text(0.05, 0.95, f'R²: {r2:.2f}', transform=plt.gca().transAxes)
         plt.text(0.05, 0.90, f'NSE: {nse:.2f}', transform=plt.gca().transAxes)
         plt.text(0.05, 0.85, f'MSE: {mse:.2f}', transform=plt.gca().transAxes)
-        plt.savefig(os.path.join(save_dir, f'output_{i+1}.png'))
+        plt.savefig(os.path.join(save_dir, f'output_{i}.png'))
         plt.close()
+
 
 
 def load_yaml_config(file_path):
@@ -222,10 +228,10 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001, mode='train')
-    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001, mode='test')
+    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2002, 2003, mode='train')
+    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001, mode='test')
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    val_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
@@ -235,7 +241,19 @@ def main():
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
     criterion = nn.MSELoss()
-    
+    if config['mode'] == 'infer':
+        model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
+        # Define batch size and input dimensions
+        # batch_size = 1  # Adjust as needed
+        # height, width = 1849, 1458  # Replace with your actual spatial dimensions
+
+        # Create dummy inputs for ppt, tmin, tmax
+        # ppt_dummy = torch.randn(batch_size, height, width)
+        # tmin_dummy = torch.randn(batch_size, height, width)
+        # tmax_dummy = torch.randn(batch_size, height, width)
+        # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
+        # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
+        inference(model, train_loader, device, 'results/Test')
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
