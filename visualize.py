@@ -11,41 +11,38 @@ def unnormalize(tensor):
 import os
 import matplotlib.pyplot as plt
 
-def visualize_all_examples(dataloader, save_dir):
+def visualize_all_examples(dataloader, batch_index, save_dir):
     os.makedirs(save_dir, exist_ok=True)
     
     for i, data in enumerate(dataloader):
-        ppt = data['ppt'].cpu().numpy()
-        tmin = data['tmin'].cpu().numpy()
-        tmax = data['tmax'].cpu().numpy()
-        
-        # Plot and save all examples from the batch
-        num_samples_in_batch = ppt.shape[0]  # Set to the total number of samples in the batch
-        
-        for j in range(num_samples_in_batch):
-            fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+        if i == batch_index:
+            ppt = data['ppt'].cpu().numpy()
+            tmin = data['tmin'].cpu().numpy()
+            tmax = data['tmax'].cpu().numpy()
             
-            # PPT plot with color bar
-            im0 = axs[0].imshow(ppt[j], cmap='Blues', aspect='auto')
-            axs[0].set_title(f'PPT Example {j} Batch {i}')
-            fig.colorbar(im0, ax=axs[0], orientation='vertical')
+            num_samples_in_batch = ppt.shape[0]  # Number of samples in the batch
             
-            # TMIN plot with color bar
-            im1 = axs[1].imshow(tmin[j], cmap='Reds', aspect='auto')
-            axs[1].set_title(f'TMIN Example {j} Batch {i}')
-            fig.colorbar(im1, ax=axs[1], orientation='vertical')
-            
-            # TMAX plot with color bar
-            im2 = axs[2].imshow(tmax[j], cmap='Reds', aspect='auto')
-            axs[2].set_title(f'TMAX Example {j} Batch {i}')
-            fig.colorbar(im2, ax=axs[2], orientation='vertical')
-            
-            # Save the figure
-            plt.savefig(os.path.join(save_dir, f'batch_{i}_sample_{j}.png'))
-            plt.close(fig)
-        
-        if i == 100:
-            return
+            for j in range(num_samples_in_batch):
+                fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+                
+                # PPT plot with color bar
+                im0 = axs[0].imshow(ppt[j], cmap='Blues', aspect='auto')
+                axs[0].set_title(f'PPT Example {j} Batch {i}')
+                fig.colorbar(im0, ax=axs[0], orientation='vertical')
+                
+                # TMIN plot with color bar
+                im1 = axs[1].imshow(tmin[j], cmap='Reds', aspect='auto')
+                axs[1].set_title(f'TMIN Example {j} Batch {i}')
+                fig.colorbar(im1, ax=axs[1], orientation='vertical')
+                
+                # TMAX plot with color bar
+                im2 = axs[2].imshow(tmax[j], cmap='Reds', aspect='auto')
+                axs[2].set_title(f'TMAX Example {j} Batch {i}')
+                fig.colorbar(im2, ax=axs[2], orientation='vertical')
+                
+                plt.savefig(os.path.join(save_dir, f'batch_{i}_sample_{j}.png'))
+                plt.close(fig)
+            break  # Stop after processing the specified batch
 
 
 def visualize_label_distributions(dataloader, num_labels, save_dir):

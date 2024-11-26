@@ -5,11 +5,11 @@ gpu: 1
 batch_size: 64
 lr: 0.0001
 epochs: 10000
-tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_54_20y"
-checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"
-save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_54_20y"
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_temporal_extrapolation_64"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_64"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_64"
 resume: true
-mode: "infer"  # "train" or "infer"
+mode: "train"  # "train" or "infer"
 
 
 # h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"

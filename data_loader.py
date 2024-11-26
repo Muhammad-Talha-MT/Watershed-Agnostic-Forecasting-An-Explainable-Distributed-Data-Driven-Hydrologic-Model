@@ -5,7 +5,7 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
 class HDF5Dataset(Dataset):
-    def __init__(self, file_path, variables, labels_path, start_year, end_year, mode='train', split_index=54):
+    def __init__(self, file_path, variables, labels_path, start_year, end_year):
         self.file_path = file_path
         self.variables = variables
         self.start_year = start_year
@@ -18,10 +18,7 @@ class HDF5Dataset(Dataset):
         labels_df = labels_df.apply(pd.to_numeric, errors='coerce')  # Convert non-numeric to NaN
         labels_df.fillna(0, inplace=True)  # Replace NaNs with 0
         # Split labels into training and testing
-        if mode == 'train':
-            labels_df = labels_df.iloc[:, 1:split_index + 1]  # +1 because upper bound is exclusive
-        else:
-            labels_df = labels_df.iloc[:, split_index + 1:]  # Assuming there are more labels beyond split_index
+        labels_df = labels_df.iloc[:, 1:]
         self.labels = self.normalize_labels(labels_df)
         
         

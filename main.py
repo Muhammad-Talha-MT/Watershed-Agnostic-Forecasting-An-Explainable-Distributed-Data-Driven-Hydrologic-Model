@@ -16,6 +16,8 @@ from visualize import visualize_all_examples, visualize_label_distributions
 from sklearn.metrics import r2_score
 import logging
 from logging.config import dictConfig  # Ensure this import is present
+# Set print options to display all data
+torch.set_printoptions(profile="full")
 # Load logging configuration from a YAML file
 def setup_logging(path='config/logging_config.yaml'):
     with open(path, 'r') as file:
@@ -61,9 +63,10 @@ def calculate_nse(y_true, y_pred):
     denominator = torch.sum((y_true - mean_observed) ** 2, dim=0)
     # Handle division by zero by using a small epsilon
     
-
     nse = 1 - (numerator / denominator)
-    # logger.debug('Num: {}, Denum {}, NSE: {}, Sum: {}, Mean: {}'.format(numerator, denominator, nse, nse.sum(), nse.mean()))
+    # if batch_idx >= 52:
+    #     logger.warning('y_true: {}, mean_observed: {}'.format(y_true, mean_observed))
+    #     logger.warning('batch_id: {}, Num: {}, Denm: {}, nse {}'.format(batch_idx, numerator, denominator, nse))
     return nse.mean()
 
 # Train the model
@@ -85,8 +88,7 @@ def train_model(model, train_loader, optimizer, criterion, device, writer, epoch
         
         optimizer.zero_grad()
         outputs = model(ppt, tmin, tmax)
-        outputs = outputs[:, :54]  # Assuming you want the first 54 labels for training
-
+        # outputs = outputs[:, :54]  # Assuming you want the first 54 labels for training
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -125,7 +127,7 @@ def val_model(model, val_loader, criterion, device, writer, epoch):
             labels = data['label'].to(device)
             
             outputs = model(ppt, tmin, tmax)
-            outputs = outputs[:, 54:64]  # Assuming these are the correct indices for validation
+            # outputs = outputs[:, 54:64]  # Assuming these are the correct indices for validation
 
             # Calculate loss for the current batch
             loss = criterion(outputs, labels)
@@ -160,7 +162,8 @@ def inference(model, dataloader, device, save_dir):
             labels = data['label'].to(device)
             outputs = model(ppt, tmin, tmax)
             # outputs = outputs[:, 54:64]  # Adjust index if needed
-            outputs = outputs[:, :54]
+            # outputs = outputs[:, :54]
+
             all_outputs.append(outputs)
             all_labels.append(labels)
 
@@ -228,11 +231,13 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2002, 2003, mode='train')
-    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001, mode='test')
+    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2014)
+    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2015, 2019)
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    
+    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
@@ -253,7 +258,7 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, train_loader, device, 'results/Test')
+        inference(model, test_loader, device, 'results/temporal_learning/Test')
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
@@ -264,19 +269,20 @@ def main():
             writer.add_scalar('MSE/Train', train_mse, epoch)
             print(f"Epoch [{epoch+1}/{config['epochs']}], Train Loss: {train_loss:.4f}, Train NSE: {train_nse:.4f}, Train MSE: {train_mse:.4f}")
             
-            if (epoch + 1) % 25 == 0:
-                save_checkpoint({
-                    'epoch': epoch,
-                    'state_dict': model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                }, filename=config['save_checkpoint_path'])
+            if (epoch + 1) % 10 == 0:
+
 
                 val_loss, val_nse, val_mse = val_model(model, val_loader, criterion, device, writer, epoch)
                 writer.add_scalar('Loss/val', val_loss, epoch)
                 writer.add_scalar('NSE/val', val_nse, epoch)
                 writer.add_scalar('MSE/val', val_mse, epoch)
                 print(f"Epoch [{epoch+1}/{config['epochs']}], val Loss: {val_loss:.4f}, val NSE: {val_nse:.4f}, Train MSE: {val_mse:.4f}")
-
+            if (epoch + 1) % 50 == 0:
+                save_checkpoint({
+                    'epoch': epoch,
+                    'state_dict': model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                }, filename=config['save_checkpoint_path'])
     writer.close()
 
 if __name__ == "__main__":

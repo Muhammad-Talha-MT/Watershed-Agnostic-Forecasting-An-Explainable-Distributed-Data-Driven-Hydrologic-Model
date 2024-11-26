@@ -32,7 +32,7 @@ class CNN_LSTM(nn.Module):
         # Fully connected layersMax
         self.fc1 = nn.Linear(512, 256)
         self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(128, 61)
         nn.init.constant_(self.fc1.bias, 0.1)  # Initialize bias to a small positive value
         nn.init.constant_(self.fc2.bias, 0.1)  # Initialize bias to a small positive value
         nn.init.constant_(self.fc3.bias, 0.1)  # Initialize bias to a small positive value
