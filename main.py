@@ -98,7 +98,7 @@ def train_model(model, train_loader, optimizer, criterion, device, writer, epoch
         nse = calculate_nse(labels, outputs)
         
         total_nse += nse.item() * current_batch_size
-        logger.debug('batch_id: {}, nse: {}, total_nse: {}, loss: {}, total_loss: {}'.format(batch_idx, nse.item(), total_nse, loss, total_loss))
+        logger.debug('batch_id: {}, nse: {}, loss: {}'.format(batch_idx, nse.item(), loss))
         mse = torch.mean((outputs - labels) ** 2).item()
         total_mse += mse * current_batch_size
         
@@ -231,13 +231,13 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
-    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2014)
-    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2015, 2019)
+    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2006)
+    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
+    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
+    # visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
@@ -258,7 +258,7 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, test_loader, device, 'results/temporal_learning/Test')
+        inference(model, val_loader, device, 'results/temporal_learning/Test')
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
