@@ -8,7 +8,7 @@ epochs: 10000
 tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_temporal_extrapolation_61_10y"
 checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y"
 save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y"
-resume: false
+resume: true
 mode: "train"  # "train" or "infer"
 
 

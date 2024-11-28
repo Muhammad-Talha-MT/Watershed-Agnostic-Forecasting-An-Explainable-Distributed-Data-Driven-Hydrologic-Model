@@ -231,12 +231,23 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    train_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2006)
-    val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
-    test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    # val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
+    # test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
+    # train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    # val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    # test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    # Define the split sizes
+    num_train = int(0.8 * len(dataset))
+    num_val = int(0.1 * len(dataset))
+    num_test = len(dataset) - num_train - num_val
+    # Randomly split the dataset
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+
+    # Create DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
+    val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
+    test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     # visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
@@ -258,7 +269,7 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, val_loader, device, 'results/temporal_learning/Test')
+        inference(model, test_loader, device, 'results/temporal_learning/Test')
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
