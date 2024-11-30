@@ -17,7 +17,7 @@ from sklearn.metrics import r2_score
 import logging
 from logging.config import dictConfig  # Ensure this import is present
 # Set print options to display all data
-torch.set_printoptions(profile="full")
+# torch.set_printoptions(profile="full")
 # Load logging configuration from a YAML file
 def setup_logging(path='config/logging_config.yaml'):
     with open(path, 'r') as file:
@@ -215,6 +215,7 @@ def load_yaml_config(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
+
 def main():
     # Load config from YAML file
     config = load_yaml_config('config/config.yaml')
@@ -231,7 +232,16 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001)
+    loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    for batch_idx, data in enumerate(loader):
+        print(data['ppt'].shape)
+        logger.debug('0: {}'.format(data['ppt'][0]))
+        logger.debug('1: {}'.format(data['ppt'][1]))
+        logger.debug('2: {}'.format(data['ppt'][2]))
+        logger.debug('3: {}'.format(data['ppt'][3]))
+        logger.debug('4: {}'.format(data['ppt'][4]))
+        exit()
     # val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
     # test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
     # train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)

@@ -1,3 +1,129 @@
+# import h5py
+# import torch
+# import numpy as np
+# import pandas as pd
+# from torch.utils.data import Dataset, DataLoader
+
+# class HDF5Dataset(Dataset):
+#     def __init__(self, file_path, variables, labels_path, start_year, end_year, sequence_length=5):
+#         self.file_path = file_path
+#         self.variables = variables
+#         self.sequence_length = sequence_length
+#         self.start_year = start_year
+#         self.end_year = end_year
+#         self.years = list(range(start_year, end_year + 1))
+
+#         # Load and preprocess labels
+#         labels_df = pd.read_csv(labels_path)
+#         labels_df = labels_df.apply(pd.to_numeric, errors='coerce')
+#         labels_df.fillna(0, inplace=True)
+#         self.labels = labels_df.iloc[:, 1:].values.astype(np.float32)  # Adjust as needed
+
+#         # Determine the total number of days
+#         self.total_days = 0
+#         with h5py.File(file_path, 'r') as file:
+#             for year in self.years:
+#                 self.total_days += file[variables[0]][str(year)].shape[0]
+#         self.total_days -= (self.sequence_length - 1)  # Adjust for sequences
+
+#         # Min/max for normalization
+#         self.global_min = {var: float('inf') for var in variables}
+#         self.global_max = {var: float('-inf') for var in variables}
+#         self.calculate_global_min_max()
+        
+#     def calculate_global_min_max(self):
+#         with h5py.File(self.file_path, 'r') as file:
+#             for year in self.years:
+#                 for var in self.variables:
+#                     data = file[var][str(year)][:]
+#                     valid_data = data[np.isfinite(data)]  # Consider only finite values
+#                     if valid_data.size > 0:
+#                         self.global_min[var] = min(self.global_min[var], np.nanmin(valid_data))
+#                         self.global_max[var] = max(self.global_max[var], np.nanmax(valid_data))
+                        
+    
+#     def normalize_labels(self, labels_df):
+#         # Ensure all values are positive by shifting the dataset
+#         labels_df += 1 - labels_df.min().clip(upper=0)
+
+#         # Apply log transformation
+#         transformed_labels = np.log1p(labels_df)
+
+#         # Calculate min/max for each column of the transformed data
+#         label_min = transformed_labels.min()
+#         label_max = transformed_labels.max()
+        
+#         # Avoid division by zero in normalization
+#         label_range = np.where((label_max - label_min) == 0, 1, (label_max - label_min))
+        
+#         # Normalize and convert to numpy array for faster access
+#         return ((transformed_labels - label_min) / label_range).values.astype(np.float32)
+
+    
+#     def _normalize_globally(self, tensor, var, idx):
+#         # Retrieve global min and max for the variable
+#         overall_min = self.global_min[var]
+#         overall_max = self.global_max[var]
+        
+#         normalized_tensor = torch.empty_like(tensor)
+        
+#         small_value = 1e-6
+        
+#         # Normalize using the overall min/max
+#         if torch.all(tensor == 0):
+#             normalized_tensor.fill_(small_value)
+#         else:
+#             mask = tensor != 0
+#             normalized_tensor[mask] = (tensor[mask] - overall_min) / (overall_max - overall_min)
+#             normalized_tensor[~mask] = small_value  # Assign small_value to zero elements if any
+       
+#         return normalized_tensor
+
+#     def __len__(self):
+#         return self.total_days
+
+#     def __getitem__(self, idx):
+#         data_sequences = {var: [] for var in self.variables}
+#         labels = None
+
+#         with h5py.File(self.file_path, 'r') as file:
+#             start_idx = idx
+#             end_idx = idx + self.sequence_length
+            
+#             # Adjust start and end indices if the end index goes beyond the available data
+#             if end_idx > self.total_days:
+#                 end_idx = self.total_days
+#                 start_idx = end_idx - self.sequence_length  # Shift the start index back to maintain sequence length
+
+#             for day_offset in range(self.sequence_length):
+#                 day_idx = start_idx + day_offset
+#                 year, day_in_year = self.find_year_and_day(day_idx, file)
+
+#                 for var in self.variables:
+#                     daily_data = file[var][str(year)][day_in_year]
+#                     daily_data = np.nan_to_num(daily_data, nan=0)
+#                     tensor_data = torch.tensor(daily_data, dtype=torch.float32)
+#                     normalized_data = (tensor_data - self.global_min[var]) / (self.global_max[var] - self.global_min[var])
+#                     data_sequences[var].append(normalized_data)
+
+#                 if day_offset == self.sequence_length - 1:  # Only fetch label for the last day in sequence
+#                     labels = torch.tensor(self.labels[day_idx], dtype=torch.float32)
+
+#         # Stack sequences along a new dimension (time dimension)
+#         for var in data_sequences:
+#             data_sequences[var] = torch.stack(data_sequences[var], dim=0)
+
+#         return {**data_sequences, 'label': labels}
+
+#     def find_year_and_day(self, idx, file):
+#         cumulative_days = 0
+#         for year in self.years:
+#             num_days_this_year = file[self.variables[0]][str(year)].shape[0]
+#             if idx < cumulative_days + num_days_this_year:
+#                 return year, idx - cumulative_days
+#             cumulative_days += num_days_this_year
+#         raise IndexError("Day index out of dataset range")
+
 import h5py
 import torch
 import numpy as np
