@@ -12,7 +12,7 @@ from data_loader import HDF5Dataset
 from dataset import ClimateDataset
 from model import ResNet_LSTM, CNN_LSTM
 import pandas as pd
-from visualize import visualize_all_examples, visualize_label_distributions
+from visualize import visualize_all_examples, visualize_label_distributions, visualize_all_examples_seq
 from sklearn.metrics import r2_score
 import logging
 from logging.config import dictConfig  # Ensure this import is present
@@ -232,16 +232,13 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2001)
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2000)
     loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    for batch_idx, data in enumerate(loader):
+    for id, data in enumerate(loader):
         print(data['ppt'].shape)
-        logger.debug('0: {}'.format(data['ppt'][0]))
-        logger.debug('1: {}'.format(data['ppt'][1]))
-        logger.debug('2: {}'.format(data['ppt'][2]))
-        logger.debug('3: {}'.format(data['ppt'][3]))
-        logger.debug('4: {}'.format(data['ppt'][4]))
-        exit()
+    # visualize_all_examples(loader, 5, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
+    # visualize_all_examples_seq(loader, batch_index=5, save_dir='/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_batch_seq')
+    exit()
     # val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
     # test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
     # train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)

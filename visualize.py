@@ -44,6 +44,42 @@ def visualize_all_examples(dataloader, batch_index, save_dir):
                 plt.close(fig)
             break  # Stop after processing the specified batch
 
+def visualize_all_examples_seq(dataloader, batch_index, save_dir):
+    os.makedirs(save_dir, exist_ok=True)
+
+    for i, data in enumerate(dataloader):
+        if i == batch_index:
+            ppt = data['ppt'].cpu().numpy()  # shape [batch_size, seq_length, height, width]
+            tmin = data['tmin'].cpu().numpy()
+            tmax = data['tmax'].cpu().numpy()
+
+            num_samples_in_batch = ppt.shape[0]  # Number of samples in the batch
+            seq_length = ppt.shape[1]  # Number of timesteps per sequence
+
+            for j in range(num_samples_in_batch):
+                fig, axs = plt.subplots(seq_length, 3, figsize=(15, 5 * seq_length))  # Create a subplot for each timestep and variable
+
+                for t in range(seq_length):
+                    # PPT plot with color bar
+                    im0 = axs[t, 0].imshow(ppt[j, t], cmap='Blues', aspect='auto')
+                    axs[t, 0].set_title(f'PPT Step {t+1}, Sample {j}, Batch {i}')
+                    fig.colorbar(im0, ax=axs[t, 0], orientation='vertical')
+
+                    # TMIN plot with color bar
+                    im1 = axs[t, 1].imshow(tmin[j, t], cmap='Reds', aspect='auto')
+                    axs[t, 1].set_title(f'TMIN Step {t+1}, Sample {j}, Batch {i}')
+                    fig.colorbar(im1, ax=axs[t, 1], orientation='vertical')
+
+                    # TMAX plot with color bar
+                    im2 = axs[t, 2].imshow(tmax[j, t], cmap='Reds', aspect='auto')
+                    axs[t, 2].set_title(f'TMAX Step {t+1}, Sample {j}, Batch {i}')
+                    fig.colorbar(im2, ax=axs[t, 2], orientation='vertical')
+
+                # Adjust layout to make room for titles and color bars
+                plt.tight_layout()
+                plt.savefig(os.path.join(save_dir, f'batch_{i}_sample_{j}.png'))
+                plt.close(fig)
+
 
 def visualize_label_distributions(dataloader, num_labels, save_dir):
     os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
