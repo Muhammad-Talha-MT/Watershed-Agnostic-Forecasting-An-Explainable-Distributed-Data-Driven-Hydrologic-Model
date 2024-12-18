@@ -234,8 +234,10 @@ def main():
     variables_to_load = ['ppt', 'tmin', 'tmax']
     dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2000)
     loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min_max_seq_dataloader')
     for id, data in enumerate(loader):
-        print(data['ppt'].shape)
+        print(data['label'].shape)
+        
     # visualize_all_examples(loader, 5, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # visualize_all_examples_seq(loader, batch_index=5, save_dir='/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_batch_seq')
     exit()
@@ -259,7 +261,7 @@ def main():
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[1, 2])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])

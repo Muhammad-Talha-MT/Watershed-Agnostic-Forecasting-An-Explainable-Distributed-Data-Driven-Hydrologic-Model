@@ -18,7 +18,7 @@ class HDF5Dataset(Dataset):
         labels_df = labels_df.apply(pd.to_numeric, errors='coerce')
         labels_df.fillna(0, inplace=True)
         self.labels = labels_df.iloc[:, 1:].values.astype(np.float32)  # Adjust as needed
-        self.labels = self.normalize_labels(labels_df)
+        self.labels = self.normalize_labels(self.labels)
         # Determine the total number of days
         self.total_days = 0
         with h5py.File(file_path, 'r') as file:
@@ -44,7 +44,8 @@ class HDF5Dataset(Dataset):
     
     def normalize_labels(self, labels_df):
         # Ensure all values are positive by shifting the dataset
-        labels_df += 1 - labels_df.min().clip(upper=0)
+        # labels_df += 1 - labels_df.min().clip(upper=0)
+        labels_df += 1 - np.clip(labels_df.min(), None, 0)
 
         # Apply log transformation
         transformed_labels = np.log1p(labels_df)
@@ -57,7 +58,7 @@ class HDF5Dataset(Dataset):
         label_range = np.where((label_max - label_min) == 0, 1, (label_max - label_min))
         
         # Normalize and convert to numpy array for faster access
-        return ((transformed_labels - label_min) / label_range).values.astype(np.float32)
+        return ((transformed_labels - label_min) / label_range).astype(np.float32)
 
     
     def _normalize_globally(self, tensor, var, idx):
