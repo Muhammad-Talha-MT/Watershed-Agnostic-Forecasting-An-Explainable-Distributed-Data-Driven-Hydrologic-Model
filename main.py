@@ -234,13 +234,16 @@ def main():
     variables_to_load = ['ppt', 'tmin', 'tmax']
     dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2000)
     loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min_max_seq_dataloader')
-    for id, data in enumerate(loader):
-        print(data['label'].shape)
-        
+    # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min_max_seq_dataloader')
+    # for id, data in enumerate(loader):
+    #     s = 0
+    #     # logger.info(data['label'])
+    #     for d in data['label']:
+    #         logger.info("'{0}, {1}, {2}'".format(id, s, d))
+    #         s+=1
     # visualize_all_examples(loader, 5, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # visualize_all_examples_seq(loader, batch_index=5, save_dir='/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_batch_seq')
-    exit()
+    # exit()
     # val_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2007, 2009)
     # test_dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2010)
     # train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)

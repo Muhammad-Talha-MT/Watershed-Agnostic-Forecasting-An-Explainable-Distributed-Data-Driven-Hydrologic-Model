@@ -18,7 +18,7 @@ class HDF5Dataset(Dataset):
         labels_df = labels_df.apply(pd.to_numeric, errors='coerce')
         labels_df.fillna(0, inplace=True)
         self.labels = labels_df.iloc[:, 1:].values.astype(np.float32)  # Adjust as needed
-        self.labels = self.normalize_labels(self.labels)
+        # self.labels = self.normalize_labels(self.labels)
         # Determine the total number of days
         self.total_days = 0
         with h5py.File(file_path, 'r') as file:
@@ -85,12 +85,12 @@ class HDF5Dataset(Dataset):
 
     def __getitem__(self, idx):
         data_sequences = {var: [] for var in self.variables}
-        labels = None
+        label = None  # Single label for the 5th day
 
         with h5py.File(self.file_path, 'r') as file:
             start_idx = idx
             end_idx = idx + self.sequence_length
-            
+
             # Adjust start and end indices if the end index goes beyond the available data
             if end_idx > self.total_days:
                 end_idx = self.total_days
@@ -102,19 +102,22 @@ class HDF5Dataset(Dataset):
 
                 for var in self.variables:
                     daily_data = file[var][str(year)][day_in_year]
-                    daily_data = np.nan_to_num(daily_data, nan=0)
+                    daily_data = np.nan_to_num(daily_data, nan=0)  # Replace NaN with 0
                     tensor_data = torch.tensor(daily_data, dtype=torch.float32)
                     normalized_data = self._normalize_globally(tensor_data, var, idx)
                     data_sequences[var].append(normalized_data)
 
-                if day_offset == self.sequence_length - 1:  # Only fetch label for the last day in sequence
-                    labels = torch.tensor(self.labels[day_idx], dtype=torch.float32)
+                # Fetch the label only for the 5th day (last day in the sequence)
+                if day_offset == self.sequence_length - 1:
+                    label = torch.tensor(self.labels[day_idx], dtype=torch.float32)
 
         # Stack sequences along a new dimension (time dimension)
         for var in data_sequences:
             data_sequences[var] = torch.stack(data_sequences[var], dim=0)
 
-        return {**data_sequences, 'label': labels}
+        # Return the sequences and the label for the 5th day
+        return {**data_sequences, 'label': label}
+
 
     def find_year_and_day(self, idx, file):
         cumulative_days = 0
