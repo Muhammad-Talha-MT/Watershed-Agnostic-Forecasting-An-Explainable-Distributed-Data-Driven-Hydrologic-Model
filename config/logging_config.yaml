@@ -15,7 +15,7 @@ handlers:
     class: logging.FileHandler
     level: DEBUG
     formatter: detailed
-    filename: logs/training-1.log
+    filename: logs/training-2.log
     encoding: utf-8
 loggers:
   my_application:

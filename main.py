@@ -150,7 +150,7 @@ def val_model(model, val_loader, criterion, device, writer, epoch):
     return avg_loss, avg_nse, avg_mse
 
 
-def inference(model, dataloader, device, save_dir):
+def inference(model, dataloader, device, save_dir, logger):
     model.eval()
     all_outputs = []
     all_labels = []
@@ -193,21 +193,22 @@ def inference(model, dataloader, device, save_dir):
         nse_values.append(nse)
         r2_values.append(r2)
 
-        print(f'Label {i+1} - R²: {r2:.2f}, NSE: {nse:.2f}, MSE: {mse:.2f}')
+        logger.info(f'Label {i+1} - R²: {r2:.2f}, NSE: {nse:.2f}, MSE: {mse:.2f}')
         
         plt.figure(figsize=(10, 6))
-        plt.scatter(label_cpu, output_cpu, alpha=0.6, color='blue')
+        plt.scatter(label_cpu, output_cpu, alpha=0.6, color='blue', label='Predictions')
+        plt.plot([label_cpu.min(), label_cpu.max()], [label_cpu.min(), label_cpu.max()], 'k--', lw=2, label='Ideal Fit')
         plt.xlabel('Actual Values')
         plt.ylabel('Predicted Values')
         plt.title(f'Actual vs. Predicted - Label {i+1}')
-        plt.plot([label_cpu.min(), label_cpu.max()], [label_cpu.min(), label_cpu.max()], 'k--', lw=2)
         plt.grid(True)
-        plt.legend()
+        plt.legend()  # This will now correctly display the legend
         plt.text(0.05, 0.95, f'R²: {r2:.2f}', transform=plt.gca().transAxes)
         plt.text(0.05, 0.90, f'NSE: {nse:.2f}', transform=plt.gca().transAxes)
         plt.text(0.05, 0.85, f'MSE: {mse:.2f}', transform=plt.gca().transAxes)
         plt.savefig(os.path.join(save_dir, f'output_{i}.png'))
         plt.close()
+
 
 
 
@@ -232,15 +233,15 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2000)
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2004)
     loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min_max_seq_dataloader')
+    print("yes")
+    visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-O-4y')
+    exit()
     # for id, data in enumerate(loader):
-    #     s = 0
-    #     # logger.info(data['label'])
-    #     for d in data['label']:
-    #         logger.info("'{0}, {1}, {2}'".format(id, s, d))
-    #         s+=1
+    #     print(data['ppt'].shape)
+    #     print(data['label'].shape)
+    #     exit()
     # visualize_all_examples(loader, 5, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # visualize_all_examples_seq(loader, batch_index=5, save_dir='/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_batch_seq')
     # exit()
@@ -264,7 +265,7 @@ def main():
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[1, 2, 3])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
@@ -281,7 +282,7 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, test_loader, device, 'results/temporal_learning/Test')
+        inference(model, test_loader, device, 'results/temporal_learning_seq/test', logger)
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
