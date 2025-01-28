@@ -233,11 +233,11 @@ def main():
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2004)
-    loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
-    print("yes")
-    visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-O-4y')
-    exit()
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    # loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    # print("yes")
+    # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-O-4y')
+    # exit()
     # for id, data in enumerate(loader):
     #     print(data['ppt'].shape)
     #     print(data['label'].shape)
