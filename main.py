@@ -1,7 +1,8 @@
 import os
 import yaml
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
 import torch
+from torchsummary import summary
 from torch.utils.data import DataLoader, random_split, Dataset, Subset
 import torch.nn as nn
 import torch.optim as optim
@@ -48,7 +49,7 @@ def load_checkpoint(checkpoint_path, model, optimizer, device):
     
     model.to(device)
     optimizer.load_state_dict(checkpoint['optimizer'])
-    
+     
     start_epoch = checkpoint['epoch'] + 1
     
     return model, optimizer, None, start_epoch  # Return None for scheduler if not in checkpoint
@@ -184,6 +185,7 @@ def inference(model, dataloader, device, save_dir, logger):
         # Convert tensors to CPU for matplotlib compatibility
         output_cpu = output.cpu().numpy()
         label_cpu = label.cpu().numpy()
+        time_index = range(len(output_cpu))  # Time series index
         
         mse = torch.mean((output - label) ** 2).item()
         nse = calculate_nse(label, output).item()
@@ -193,22 +195,58 @@ def inference(model, dataloader, device, save_dir, logger):
         nse_values.append(nse)
         r2_values.append(r2)
 
+        # logger.info(f'Label {i+1} - R²: {r2:.2f}, NSE: {nse:.2f}, MSE: {mse:.2f}')
+        
+        # plt.figure(figsize=(10, 6))
+        # plt.scatter(label_cpu, output_cpu, alpha=0.6, color='blue', label='Predictions')
+        # plt.plot([label_cpu.min(), label_cpu.max()], [label_cpu.min(), label_cpu.max()], 'k--', lw=2, label='Ideal Fit')
+        # plt.xlabel('Actual Values')
+        # plt.ylabel('Predicted Values')
+        # plt.title(f'Actual vs. Predicted - Label {i+1}')
+        # plt.grid(True)
+        # plt.legend()  # This will now correctly display the legend
+        # plt.text(0.05, 0.95, f'R²: {r2:.2f}', transform=plt.gca().transAxes)
+        # plt.text(0.05, 0.90, f'NSE: {nse:.2f}', transform=plt.gca().transAxes)
+        # plt.text(0.05, 0.85, f'MSE: {mse:.2f}', transform=plt.gca().transAxes)
+        # plt.savefig(os.path.join(save_dir, f'output_{i}.png'))
+        # plt.close()
         logger.info(f'Label {i+1} - R²: {r2:.2f}, NSE: {nse:.2f}, MSE: {mse:.2f}')
         
-        plt.figure(figsize=(10, 6))
-        plt.scatter(label_cpu, output_cpu, alpha=0.6, color='blue', label='Predictions')
-        plt.plot([label_cpu.min(), label_cpu.max()], [label_cpu.min(), label_cpu.max()], 'k--', lw=2, label='Ideal Fit')
-        plt.xlabel('Actual Values')
-        plt.ylabel('Predicted Values')
-        plt.title(f'Actual vs. Predicted - Label {i+1}')
+        # Plot Time Series
+        plt.figure(figsize=(12, 6))
+        plt.plot(time_index, label_cpu, label='Actual', color='blue', linewidth=2)
+        plt.plot(time_index, output_cpu, label='Predicted', color='red', linestyle='dashed', linewidth=2)
+        plt.xlabel('Time')
+        plt.ylabel('Streamflow')
+        plt.title(f'Time Series Plot - Label {i+1}')
+        plt.legend()
         plt.grid(True)
-        plt.legend()  # This will now correctly display the legend
-        plt.text(0.05, 0.95, f'R²: {r2:.2f}', transform=plt.gca().transAxes)
-        plt.text(0.05, 0.90, f'NSE: {nse:.2f}', transform=plt.gca().transAxes)
-        plt.text(0.05, 0.85, f'MSE: {mse:.2f}', transform=plt.gca().transAxes)
-        plt.savefig(os.path.join(save_dir, f'output_{i}.png'))
-        plt.close()
 
+        # Annotate with performance metrics
+        plt.text(0.05, 0.90, f'R²: {r2:.2f}', transform=plt.gca().transAxes)
+        plt.text(0.05, 0.85, f'NSE: {nse:.2f}', transform=plt.gca().transAxes)
+        plt.text(0.05, 0.80, f'MSE: {mse:.2f}', transform=plt.gca().transAxes)
+
+        plt.savefig(os.path.join(save_dir, f'timeseries_output_{i}.png'))
+        plt.close()
+        
+        
+        # === Percent Error Histogram Plot ===
+        percent_error = 100 * (output_cpu - label_cpu) / (label_cpu + 1e-8)
+        hist_colors = ['red' if e > 0 else 'blue' for e in percent_error]
+
+        plt.figure(figsize=(12, 6))
+        plt.bar(time_index, percent_error, color=hist_colors, alpha=0.7)
+        plt.axhline(0, color='black', linewidth=1)
+        plt.title(f'Percent Error Histogram - Label {i+1}')
+        plt.xlabel('Days')
+        plt.ylabel('Percent Error (%)')
+        plt.grid(True)
+
+        hist_dir = os.path.join(save_dir, 'error_histograms')
+        os.makedirs(hist_dir, exist_ok=True)
+        plt.savefig(os.path.join(hist_dir, f'percent_error_histogram_label_{i+1}.png'))
+        plt.close()
 
 
 
@@ -226,7 +264,7 @@ def main():
     # Get the logger specified in the YAML file
     logger = logging.getLogger('my_application')
     # Set primary device for DataParallel
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
@@ -234,6 +272,8 @@ def main():
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
     dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    dataset_size = len(dataset) 
+    # dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2019)
     # loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     # print("yes")
     # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-O-4y')
@@ -255,17 +295,32 @@ def main():
     num_val = int(0.1 * len(dataset))
     num_test = len(dataset) - num_train - num_val
     # Randomly split the dataset
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+    # train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+    
+    
+    # Indices:
+    train_indices = range(0, num_train)
+    val_indices   = range(num_train, num_train + num_val)
+    test_indices  = range(num_train + num_val, dataset_size)
+    # Randomly split the dataset
+    # train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+    # Create subsets
+    train_dataset = Subset(dataset, train_indices)
+    val_dataset   = Subset(dataset, val_indices)
+    test_dataset  = Subset(dataset, test_indices)
 
     # Create DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
+    
+    
+    # test_loader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     # visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[1, 2, 3])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=[0, 1, 2])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
@@ -282,20 +337,36 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, test_loader, device, 'results/temporal_learning_seq/test', logger)
+        inference(model, test_loader, device, 'results/03212025/test', logger)
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
+        # if config['fine_tune']:
+        #     model.module.freeze_backbone() if isinstance(model, nn.DataParallel) else model.freeze_backbone()
+        #     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
+            
         for epoch in range(start_epoch, config['epochs']):
             train_loss, train_nse, train_mse = train_model(model, train_loader, optimizer, criterion, device, writer, epoch, logger)
             writer.add_scalar('Loss/Train', train_loss, epoch)
             writer.add_scalar('NSE/Train', train_nse, epoch)
             writer.add_scalar('MSE/Train', train_mse, epoch)
             print(f"Epoch [{epoch+1}/{config['epochs']}], Train Loss: {train_loss:.4f}, Train NSE: {train_nse:.4f}, Train MSE: {train_mse:.4f}")
-            
+
+            # Unfreeze LSTM after 10 epochs
+            # if epoch == start_epoch + 10 and config['fine_tune']:
+            #     for name, param in model.named_parameters():
+            #         if "lstm" in name:
+            #             param.requires_grad = True
+            #     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=5e-5)
+
+            # # Unfreeze CNN after 20 epochs
+            # if epoch == start_epoch + 20 and config['fine_tune']:
+            #     for name, param in model.named_parameters():
+            #         param.requires_grad = True
+            #     optimizer = optim.Adam(model.parameters(), lr=1e-5)     
+                
+                       
             if (epoch + 1) % 10 == 0:
-
-
                 val_loss, val_nse, val_mse = val_model(model, val_loader, criterion, device, writer, epoch)
                 writer.add_scalar('Loss/val', val_loss, epoch)
                 writer.add_scalar('NSE/val', val_nse, epoch)

@@ -3,13 +3,14 @@ labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_d
 # labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/combined_streamflow_all_vpuids.csv"
 gpu: 1
 batch_size: 24
-lr: 0.0001
+lr: 0.01
 epochs: 10000
-tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_temporal_extrapolation_61_10y"
-checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y_700"
-save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y"
-resume: true
-mode: "infer"  # "train" or "infer"
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/03212025_finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/03212025_finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
+resume: false
+fine_tune: false
+mode: "train"  # "train" or "infer"
 
 
 # h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
