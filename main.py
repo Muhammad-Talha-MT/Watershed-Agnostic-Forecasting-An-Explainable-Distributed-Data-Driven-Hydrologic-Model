@@ -257,12 +257,17 @@ def main():
     # Get the logger specified in the YAML file
     logger = logging.getLogger('my_application')
     # Set primary device for DataParallel
+<<<<<<< HEAD
     device = torch.device(f"cuda:{config['gpu'][0]}" if torch.cuda.is_available() else "cpu") 
+=======
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") 
+>>>>>>> 435a3cb (Nov9)
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
 
     # Load data
+<<<<<<< HEAD
     variables_to_load = ['ppt', 'tmin', 'tmax']
     dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2009, 2009)
     dataset_size = len(dataset) 
@@ -271,6 +276,59 @@ def main():
     loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     # print("yes")
     # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/normalized_2010_2019_nolog')
+=======
+    ppt = read_hdf5_data_parallel(config['h5_file'], 'ppt', 2002, 2006)
+    tmin = read_hdf5_data_parallel(config['h5_file'], 'tmin', 2002, 2006)
+    tmax = read_hdf5_data_parallel(config['h5_file'], 'tmax', 2002, 2006)
+
+    labels = pd.read_csv(config['labels_path'])
+    labels = labels.iloc[:1825]
+    min_length = min(len(ppt), len(tmin), len(tmax), len(labels))
+    
+    # labels_train = pd.read_csv(config['labels_path']+'_train_54.csv')
+    # labels_val = pd.read_csv(config['labels_path']+'_val_10.csv')
+    # labels_train = labels_train.iloc[:1825]
+    # labels_val = labels_val.iloc[:1825]
+
+    # Ensure consistency between input data and labels
+    # min_length = min(len(ppt), len(tmin), len(tmax), len(labels_train))
+    min_length = 1825
+    ppt = ppt[:min_length]
+    tmin = tmin[:min_length]
+    tmax = tmax[:min_length]
+    labels = labels[:min_length]
+    # train_labels = labels_train[:min_length]
+    # val_labels = labels_val[:min_length]
+    
+    
+    # Prepare datasets
+    # Split the labels into training and valing
+    train_labels = labels.iloc[:, 1:45]  # First 45 labels for training
+    val_labels = labels.iloc[:, 45:55]   # Last 19 labels for valing
+    test_labels = labels.iloc[:, 55:]   # Last 19 labels for valing
+    print(train_labels.shape, val_labels.shape, test_labels.shape)
+    # exit()
+    # Create separate datasets for training and valing
+    train_dataset = ClimateDataset(ppt, tmin, tmax, train_labels)
+    val_dataset = ClimateDataset(ppt, tmin, tmax, val_labels)
+    test_dataset = ClimateDataset(ppt, tmin, tmax, test_labels)
+    # Now split the dataset
+    print(train_dataset.labels)
+    print("Train PPT:", train_dataset.ppt.shape)
+    print("Train TMIN:",train_dataset.tmin.shape)
+    print("Train TMAX:",train_dataset.tmax.shape)
+    print("Train labels:",train_dataset.labels.shape)
+    print(val_dataset.labels)
+    print("val PPT:", val_dataset.ppt.shape)
+    print("val TMIN:",val_dataset.tmin.shape)
+    print("val TMAX:",val_dataset.tmax.shape)
+    print("val labels:",val_dataset.labels.shape)
+    print(test_dataset.labels)
+    print("val PPT:", test_dataset.ppt.shape)
+    print("val TMIN:",test_dataset.tmin.shape)
+    print("val TMAX:",test_dataset.tmax.shape)
+    print("val labels:",test_dataset.labels.shape)
+>>>>>>> 435a3cb (Nov9)
     # exit()
     # for id, data in enumerate(loader):
     #     print(data['ppt'].shape)
@@ -337,7 +395,11 @@ def main():
     
     # model = PretrainedCNNLSTM().to(device)
     start_epoch = 0
+<<<<<<< HEAD
     model = nn.DataParallel(model, device_ids=config['gpu'])  # Multi-GPU support with DataParallel
+=======
+    model = nn.DataParallel(model, device_ids=[1])  # Multi-GPU support with DataParallel
+>>>>>>> 435a3cb (Nov9)
     # Freeze the CNN and LSTM layers
     
     optimizer = optim.Adam(model.parameters(), lr=config['lr'], weight_decay=1e-5)

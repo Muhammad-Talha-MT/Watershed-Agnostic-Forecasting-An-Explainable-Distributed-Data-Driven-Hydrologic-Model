@@ -9,9 +9,15 @@ gpu: [0, 1, 2, 3]
 batch_size: 30
 lr: 0.001
 epochs: 10000
+<<<<<<< HEAD
 tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/05022025_cnn_lstm_global_temporal_extrapolation_61_10y"
 checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y"
 save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/05022025_cnn_lstm_global_temporal_extrapolation_61_10y"
+=======
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/cnn_lstm_global_spatial_interpolation_64_4y"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_4y"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_spatial_interpolation_64_4y"
+>>>>>>> 435a3cb (Nov9)
 resume: false
 fine_tune: false
 mode: "infer"  # "train" or "infer"
