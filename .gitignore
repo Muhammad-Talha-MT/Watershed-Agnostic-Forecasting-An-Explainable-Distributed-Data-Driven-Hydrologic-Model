@@ -4,7 +4,6 @@ runs/
 logs/
 plots/
 results/
-analysis/
 __pycache__/*
 __pycache__/data_loader.cpython-39.pyc
 __pycache__/dataset.cpython-39.pyc
