@@ -13,12 +13,24 @@ class HDF5Dataset(Dataset):
         self.end_year = end_year
         self.years = list(range(start_year, end_year + 1))
 
-        # Load and preprocess labels
+        # # Load and preprocess labels
+        # labels_df = pd.read_csv(labels_path)
+        # labels_df = labels_df.apply(pd.to_numeric, errors='coerce')
+        # labels_df.fillna(0, inplace=True)
+        # self.labels = labels_df.iloc[:, 1:].values.astype(np.float32)  # Adjust as needed
+
         labels_df = pd.read_csv(labels_path)
+        # Convert the first column to datetime (assuming it is named 'date')
+        labels_df['date'] = pd.to_datetime(labels_df['date'], errors='coerce')
+        # Filter rows based on the year
+        labels_df = labels_df[(labels_df['date'].dt.year >= start_year) & (labels_df['date'].dt.year <= end_year)]
+        # Drop the date column and convert remaining values to float32
+        labels_df = labels_df.drop(columns=['date'])
         labels_df = labels_df.apply(pd.to_numeric, errors='coerce')
         labels_df.fillna(0, inplace=True)
-        self.labels = labels_df.iloc[:, 1:].values.astype(np.float32)  # Adjust as needed
+        self.labels = labels_df.values.astype(np.float32)
         # self.labels = self.normalize_labels(self.labels)
+
         # Determine the total number of days
         self.total_days = 0
         with h5py.File(file_path, 'r') as file:
@@ -45,20 +57,19 @@ class HDF5Dataset(Dataset):
     def normalize_labels(self, labels_df):
         # Ensure all values are positive by shifting the dataset
         # labels_df += 1 - labels_df.min().clip(upper=0)
-        labels_df += 1 - np.clip(labels_df.min(), None, 0)
-
+        # labels_df += 1 - np.clip(labels_df.min(), None, 0)
         # Apply log transformation
-        transformed_labels = np.log1p(labels_df)
+        # transformed_labels = np.log1p(labels_df)
 
         # Calculate min/max for each column of the transformed data
-        label_min = transformed_labels.min()
-        label_max = transformed_labels.max()
+        label_min = labels_df.min()
+        label_max = labels_df.max()
         
         # Avoid division by zero in normalization
         label_range = np.where((label_max - label_min) == 0, 1, (label_max - label_min))
         
         # Normalize and convert to numpy array for faster access
-        return ((transformed_labels - label_min) / label_range).astype(np.float32)
+        return ((labels_df - label_min) / label_range).astype(np.float32)
 
     
     def _normalize_globally(self, tensor, var, idx):
@@ -78,6 +89,31 @@ class HDF5Dataset(Dataset):
             normalized_tensor[mask] = (tensor[mask] - overall_min) / (overall_max - overall_min)
             normalized_tensor[~mask] = small_value  # Assign small_value to zero elements if any
        
+        return normalized_tensor
+
+    def _normalize_labels(self, tensor):
+        """
+        Normalize each column (label) of the input tensor to the [0, 1] range.
+
+        Parameters
+        ----------
+        tensor : torch.Tensor
+            A 2D tensor of shape (N, num_labels) representing raw labels.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of the same shape with values normalized per column.
+        """
+        normalized_tensor = torch.empty_like(tensor)
+        for i in range(tensor.shape[1]):  # Loop over each label (column)
+            min_val = torch.min(tensor[:, i])
+            max_val = torch.max(tensor[:, i])
+            # Avoid division by zero if the label is constant
+            if max_val - min_val == 0:
+                normalized_tensor[:, i] = 0.0
+            else:
+                normalized_tensor[:, i] = (tensor[:, i] - min_val) / (max_val - min_val)
         return normalized_tensor
 
     def __len__(self):

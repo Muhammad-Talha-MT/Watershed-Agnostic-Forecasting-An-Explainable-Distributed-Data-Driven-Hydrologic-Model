@@ -1,6 +1,6 @@
 import os
 import yaml
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 import torch
 from torchsummary import summary
 from torch.utils.data import DataLoader, random_split, Dataset, Subset
@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 from torch.utils.tensorboard import SummaryWriter
 from data_loader import HDF5Dataset
 from dataset import ClimateDataset
-from model import ResNet_LSTM, CNN_LSTM
+from model import ResNet_LSTM, CNN_LSTM, PretrainedCNNLSTM
 import pandas as pd
 from visualize import visualize_all_examples, visualize_label_distributions, visualize_all_examples_seq
 from sklearn.metrics import r2_score
@@ -92,25 +92,21 @@ def train_model(model, train_loader, optimizer, criterion, device, writer, epoch
         # outputs = outputs[:, :54]  # Assuming you want the first 54 labels for training
         loss = criterion(outputs, labels)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # Gradient clipping
+        
         optimizer.step()
 
         # Accumulate the loss and metrics, weighted by batch size
         total_loss += loss.item() * current_batch_size
         nse = calculate_nse(labels, outputs)
-        
         total_nse += nse.item() * current_batch_size
         logger.debug('batch_id: {}, nse: {}, loss: {}'.format(batch_idx, nse.item(), loss))
-        mse = torch.mean((outputs - labels) ** 2).item()
-        total_mse += mse * current_batch_size
-        
         # Update total samples
         total_samples += current_batch_size
-
     # Calculate the averages using the total samples
     avg_loss = total_loss / total_samples
     avg_nse = total_nse / total_samples
-    avg_mse = total_mse / total_samples  # Average MSE
-    return avg_loss, avg_nse, avg_mse
+    return avg_loss, avg_nse
 
 
 def val_model(model, val_loader, criterion, device, writer, epoch):
@@ -137,8 +133,6 @@ def val_model(model, val_loader, criterion, device, writer, epoch):
             # Calculate NSE and MSE for the current batch, weighted
             nse = calculate_nse(labels, outputs)
             total_nse += nse.item() * labels.size(0)
-            mse = torch.mean((outputs - labels) ** 2).item()
-            total_mse += mse * labels.size(0)
 
             # Update total samples count
             total_samples += labels.size(0)
@@ -146,9 +140,8 @@ def val_model(model, val_loader, criterion, device, writer, epoch):
     # Calculate average loss, NSE, and MSE over all batches
     avg_loss = total_loss / total_samples
     avg_nse = total_nse / total_samples
-    avg_mse = total_mse / total_samples  # Average MSE
 
-    return avg_loss, avg_nse, avg_mse
+    return avg_loss, avg_nse
 
 
 def inference(model, dataloader, device, save_dir, logger):
@@ -264,19 +257,20 @@ def main():
     # Get the logger specified in the YAML file
     logger = logging.getLogger('my_application')
     # Set primary device for DataParallel
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+    device = torch.device(f"cuda:{config['gpu'][0]}" if torch.cuda.is_available() else "cpu") 
 
     # Set up TensorBoard writer
     writer = SummaryWriter(log_dir=config['tensorboard_logdir'])
 
     # Load data
     variables_to_load = ['ppt', 'tmin', 'tmax']
-    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2000, 2009)
+    dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2009, 2009)
     dataset_size = len(dataset) 
+    print(f"Dataset size: {dataset_size}")
     # dataset = HDF5Dataset(config['h5_file'], variables_to_load, config['labels_path'], 2010, 2019)
-    # loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
+    loader = DataLoader(dataset, batch_size=config['batch_size'], num_workers=32, shuffle=False)
     # print("yes")
-    # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/min-max-O-4y')
+    # visualize_label_distributions(loader, 61, '/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/normalized_2010_2019_nolog')
     # exit()
     # for id, data in enumerate(loader):
     #     print(data['ppt'].shape)
@@ -295,35 +289,58 @@ def main():
     num_val = int(0.1 * len(dataset))
     num_test = len(dataset) - num_train - num_val
     # Randomly split the dataset
-    # train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
     
     
     # Indices:
-    train_indices = range(0, num_train)
-    val_indices   = range(num_train, num_train + num_val)
-    test_indices  = range(num_train + num_val, dataset_size)
+    # train_indices = range(0, num_train)
+    # val_indices   = range(num_train, num_train + num_val)
+    # test_indices  = range(num_train + num_val, dataset_size)
+    
+    # N = len(dataset)
+    # train_indices, val_indices, test_indices = [], [], []
+
+    # block_size = 24 + 3 + 3  # 30 days per cycle
+
+    # for start in range(0, N, block_size):
+    #     end   = min(start + block_size, N)
+    #     t_end = min(start + 24, end)
+    #     v_end = min(t_end  + 3, end)
+    #     x_end = min(v_end  + 3, end)
+
+    #     # extend each list by the appropriate slice
+    #     train_indices.extend(range(start, t_end))
+    #     val_indices.extend(range(t_end, v_end))
+    #     test_indices.extend(range(v_end, x_end))
+    
+
     # Randomly split the dataset
     # train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
     # Create subsets
-    train_dataset = Subset(dataset, train_indices)
-    val_dataset   = Subset(dataset, val_indices)
-    test_dataset  = Subset(dataset, test_indices)
+    # train_dataset = Subset(dataset, train_indices)
+    # val_dataset   = Subset(dataset, val_indices)
+    # test_dataset  = Subset(dataset, test_indices)
 
+    print(f"Train size: {len(train_dataset)}, Val size: {len(val_dataset)}, Test size: {len(test_dataset)}")
+    # exit()
+    # print(f"Train size: {len(train_dataset)}, Val size: {len(val_dataset)}, Test size: {len(test_dataset)}")
     # Create DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     val_loader = DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
-    
+    test_loader = loader
     
     # test_loader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=False, num_workers=32)
     # visualize_all_examples(train_loader, 16, "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/data_plots/first_100_global_optimized_dataloader")
     # Initialize model, optimizer, and loss function
     model = CNN_LSTM().to(device)
+    
+    # model = PretrainedCNNLSTM().to(device)
     start_epoch = 0
-    model = nn.DataParallel(model, device_ids=[0, 1, 2])  # Multi-GPU support with DataParallel
+    model = nn.DataParallel(model, device_ids=config['gpu'])  # Multi-GPU support with DataParallel
     # Freeze the CNN and LSTM layers
     
-    optimizer = optim.Adam(model.parameters(), lr=config['lr'])
+    optimizer = optim.Adam(model.parameters(), lr=config['lr'], weight_decay=1e-5)
     criterion = nn.MSELoss()
     if config['mode'] == 'infer':
         model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
@@ -337,7 +354,7 @@ def main():
         # tmax_dummy = torch.randn(batch_size, height, width)
         # writer.add_graph(model, (ppt_dummy, tmin_dummy, tmax_dummy))
         # inference_loader = DataLoader(val_loader, batch_size=config['batch_size'])
-        inference(model, test_loader, device, 'results/03212025/test', logger)
+        inference(model, test_loader, device, 'results/04122025/test', logger)
     if config['mode'] == 'train' :
         if config['resume']:
             model, optimizer, scheduler, start_epoch = load_checkpoint(config['checkpoint_path'], model, optimizer, device)
@@ -346,11 +363,10 @@ def main():
         #     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
             
         for epoch in range(start_epoch, config['epochs']):
-            train_loss, train_nse, train_mse = train_model(model, train_loader, optimizer, criterion, device, writer, epoch, logger)
+            train_loss, train_nse = train_model(model, train_loader, optimizer, criterion, device, writer, epoch, logger)
             writer.add_scalar('Loss/Train', train_loss, epoch)
             writer.add_scalar('NSE/Train', train_nse, epoch)
-            writer.add_scalar('MSE/Train', train_mse, epoch)
-            print(f"Epoch [{epoch+1}/{config['epochs']}], Train Loss: {train_loss:.4f}, Train NSE: {train_nse:.4f}, Train MSE: {train_mse:.4f}")
+            print(f"Epoch [{epoch+1}/{config['epochs']}], Train Loss: {train_loss:.4f}, Train NSE: {train_nse:.4f}")
 
             # Unfreeze LSTM after 10 epochs
             # if epoch == start_epoch + 10 and config['fine_tune']:
@@ -367,11 +383,10 @@ def main():
                 
                        
             if (epoch + 1) % 10 == 0:
-                val_loss, val_nse, val_mse = val_model(model, val_loader, criterion, device, writer, epoch)
+                val_loss, val_nse = val_model(model, val_loader, criterion, device, writer, epoch)
                 writer.add_scalar('Loss/val', val_loss, epoch)
                 writer.add_scalar('NSE/val', val_nse, epoch)
-                writer.add_scalar('MSE/val', val_mse, epoch)
-                print(f"Epoch [{epoch+1}/{config['epochs']}], val Loss: {val_loss:.4f}, val NSE: {val_nse:.4f}, Train MSE: {val_mse:.4f}")
+                print(f"Epoch [{epoch+1}/{config['epochs']}], val Loss: {val_loss:.4f}, val NSE: {val_nse:.4f}")
             if (epoch + 1) % 50 == 0:
                 save_checkpoint({
                     'epoch': epoch,

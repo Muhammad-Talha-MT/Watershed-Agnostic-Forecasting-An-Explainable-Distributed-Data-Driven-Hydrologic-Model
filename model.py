@@ -146,3 +146,58 @@ class ResNet_LSTM(nn.Module):
         # x = self.relu(x)
 
         return x
+    
+class PretrainedCNNLSTM(nn.Module):
+    """
+    Fast CNN-LSTM using a pretrained ResNet18 backbone and GRU.
+    - Inputs: ppt, tmin, tmax as [B, T, H, W]
+    - Backbone: ResNet18 pretrained, truncated before avgpool
+    """
+    def __init__(self, num_outputs=61, freeze_backbone=True):
+        super(PretrainedCNNLSTM, self).__init__()
+        # Load ResNet18 backbone with latest default weights
+        resnet = resnet18(weights=ResNet18_Weights.DEFAULT)
+        # Remove fully connected layer and avgpool
+        self.backbone = nn.Sequential(*list(resnet.children())[:-2])  # outputs [B, 512, H', W']
+        # Global pooling to collapse spatial dims -> [B, 512]
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        feature_dim = 512
+
+        # Optionally freeze backbone
+        if freeze_backbone:
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+
+        # Temporal GRU instead of LSTM for speed
+        self.gru = nn.GRU(feature_dim, 128, batch_first=True, dropout=0.0)
+        # Final classification head
+        self.classifier = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, num_outputs)
+        )
+
+    def forward(self, ppt, tmin, tmax):
+        # Stack inputs along channel dim: [B, T, 3, H, W]
+        x = torch.stack((ppt, tmin, tmax), dim=2)
+        B, T, C, H, W = x.shape
+
+        # Merge batch and time for single CNN pass
+        x = x.view(B * T, C, H, W)
+        # Backbone feature maps: [B*T, 512, H', W']
+        feat = self.backbone(x)
+        # Global pooling and reshape back to sequence: [B, T, 512]
+        feat = self.global_pool(feat).view(B, T, -1)
+
+        # Temporal modeling
+        out, _ = self.gru(feat)         # [B, T, 128]
+        last = out[:, -1, :]            # [B, 128]
+
+        # Classification
+        return self.classifier(last)
+
+    def freeze_backbone(self):
+        """Unfreeze all backbone parameters."""
+        for param in self.backbone.parameters():
+            param.requires_grad = True
+

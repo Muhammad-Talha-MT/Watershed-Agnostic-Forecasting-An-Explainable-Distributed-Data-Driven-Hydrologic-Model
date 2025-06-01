@@ -94,8 +94,8 @@ def visualize_label_distributions(dataloader, num_labels, save_dir):
     # Plot distributions
     for i in range(num_labels):
         plt.figure(figsize=(10, 6))
-        # sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=np.ptp(label_data[f'Label {i}']) / 30)  # Adjust binwidth as necessary
-        sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=0.1)
+        sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=np.ptp(label_data[f'Label {i}']) / 30)  # Adjust binwidth as necessary
+        # sns.histplot(label_data[f'Label {i}'], kde=True, color='blue', binwidth=0.1)
         plt.title(f'Distribution of Label {i}')
         plt.xlabel(f'Label {i}')
         plt.ylabel('Frequency')

@@ -1,16 +1,20 @@
 h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
 labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/spatial_interpolation.csv"
+usgs_metadata: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/usgs_locations.csv"
+usgs_clusters: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/analysis/perturbation_technique/streamflow_clusters/spatiotemporal_station_clusters.csv"
+watershed_shp: "/home/talhamuh/water-research/CNN-LSMT/data/raw/Michigan/Final_Michigan_Map/Watershed_Boundary_Intersect_Michigan.shp"
+bedrock_shp: "/home/talhamuh/water-research/CNN-LSMT/data/raw/Michigan/Bedrock/Bedrock_outerboundry.shp"
 # labels_path: "/home/talhamuh/water-research/CNN-LSMT/data/processed/streamflow_data/combined_streamflow_all_vpuids.csv"
-gpu: 1
-batch_size: 24
-lr: 0.01
+gpu: [0, 1, 2, 3]
+batch_size: 30
+lr: 0.001
 epochs: 10000
-tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
-checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/03212025_finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
-save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/03212025_finetune_cnn_lstm_global_temporal_extrapolation_61_10y"
+tensorboard_logdir: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/runs/05022025_cnn_lstm_global_temporal_extrapolation_61_10y"
+checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/cnn_lstm_global_temporal_extrapolation_61_10y"
+save_checkpoint_path: "/home/talhamuh/water-research/CNN-LSMT/src/cnn_lstm_project/checkpoint/05022025_cnn_lstm_global_temporal_extrapolation_61_10y"
 resume: false
 fine_tune: false
-mode: "train"  # "train" or "infer"
+mode: "infer"  # "train" or "infer"
 
 
 # h5_file: "/data/PRISM/Michigan_250m_1990_2022.h5"
